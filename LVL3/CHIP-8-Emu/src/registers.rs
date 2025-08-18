@@ -5,11 +5,11 @@
 ///Next, we got the program counter (PC), used to store the currently executing address
 ///The Stack Pointer (SP) is used to store the topmost level of the stack.
 
-struct Registers {
-    v: [u8; 16],
-    i: u16,
-    pc: u16,
-    sp: u8,
-    dt: u8,
-    st: u8,
+pub struct Registers {
+  pub  v: [u8; 16],
+  pub  i: u16,
+  pub  pc: u16,
+  pub  sp: u8,
+  pub  dt: u8,
+  pub  st: u8,
 }

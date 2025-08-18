@@ -1,3 +1,2 @@
-struct Memory{
-    data: [u8; 4096],
+pub struct Memory{
 }
