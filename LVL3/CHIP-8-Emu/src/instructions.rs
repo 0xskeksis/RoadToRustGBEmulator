@@ -5,44 +5,91 @@
 
 use crate::emu::Emu;
 
+const KK_MASK: u16 = 0x00FF;
+const NNN_MASK: u16 = 0x0FFF;
+const X_MASK: u16 = 0x0F00;
+const Y_MASK: u16 = 0x00F0;
+const LAST_MASK: u16 = 0x000F;
+
+///0x00E0 - CLS:
+///Clear the display.
+///00EE - RET:
+///Return from a subroutine.
 pub fn op_0(emu: &mut Emu, opcode: u16){
     match opcode {
         0x00E0 => println!("CLS"),
         0x00EE => println!("RET"),
         _ => println!("Error in op_0: Opcode: {opcode} unknown."),
     }
+    _ = emu;
 }
 
+///1nnn - JP addr
+///Jump to location nnn.
 pub fn op_1(emu: &mut Emu, opcode: u16){
-    println!("JP");
+    let nnn = opcode & NNN_MASK;
+    println!("JP at {nnn}");
+    _ = emu;
 }
 
+///2nnn - CALL addr
+///Call subroutine at nnn.
 pub fn op_2(emu: &mut Emu,opcode: u16){
-    println!("CALL");
+    let nnn = opcode & NNN_MASK;
+    println!("CALL: {nnn}");
+    _ = emu;
 }
 
+///3xkk - SE Vx, byte
+///Skip next instruction if Vx = kk.
 pub fn op_3(emu: &mut Emu, opcode: u16){
-    println!("SE Vx, byte");
+    let x = opcode & X_MASK;
+    let kk = opcode & KK_MASK;
+    println!("SE Vx, byte: Vx = V{x} | kk = {kk}");
+    _ = emu;
 }
 
+///4xkk - SNE Vx, byte
+///Skip next instruction if Vx != kk.
 pub fn op_4(emu: &mut Emu, opcode: u16){
-    println!("SNE Vx, byte")
+    let x = opcode & X_MASK;
+    let kk = opcode & KK_MASK;
+    println!("SNE Vx, byte: Vx = V{x} | kk = {kk}");
+    _ = emu;
 }
 
+///5xy0 - SE Vx, Vy
+///Skip next instruction if Vx = Vy.
 pub fn op_5(emu: &mut Emu, opcode: u16){
+    let last = opcode & LAST_MASK;
+    if last > 0x0 {
+        println!("Error in op_5: opcode: {opcode} unknown.");
+        return ;
+    }
     println!("SE Vx, Vy");
+    _ = emu;
 }
 
+///6xkk - LD Vx, byte
+///Set Vx = kk.
 pub fn op_6(emu: &mut Emu, opcode: u16){
-    println!("LD Vx, byte");
+    let x = opcode & X_MASK;
+    let kk = opcode & KK_MASK;
+    println!("LD Vx, byte | Vx = V{x}, byte = {kk}");
+    _ = emu;
 }
 
+///7xkk - ADD Vx, byte
+///Set Vx = Vx + kk.
 pub fn op_7(emu: &mut Emu, opcode: u16){
-    println!("ADD Vx, byte")
+    let x = opcode & X_MASK;
+    let kk = opcode & KK_MASK;
+    println!("ADD Vx, byte | Vx = V{x}, byte = {kk}");
+    _ = emu;
 }
 
 pub fn op_8(emu: &mut Emu, opcode: u16){
-    let n = opcode & 0xF;
+    let n = opcode & LAST_MASK;
     match n {
         0x0 => println!("LD Vx, Vy"),
         0x1 => println!("OR Vx, Vy"),
@@ -55,36 +102,68 @@ pub fn op_8(emu: &mut Emu, opcode: u16){
         0xE => println!("SHL Vx ,Vy"),
         _ => println!("Error in op_8: Opcode: {n} unknown."),
     }
+    _ = emu;
 }
 
+///9xy0 - SNE Vx, Vy
+///Skip next instruction if Vx != Vy.
 pub fn op_9(emu: &mut Emu, opcode: u16){
+    let last = opcode & LAST_MASK;
+    if last > 0x0 {
+        println!("Error in op_9: opcode: {opcode} unknown.");
+        return ;
+    }
     println!("SNE Vx, Vy");
+    _ = emu;
 }
 
+///Annn - LD I, addr
+///Set I = nnn.
 pub fn op_a(emu: &mut Emu, opcode: u16){
-    println!("LD I, addr");
+    let nnn = opcode & NNN_MASK;
+    println!("LD I, addr | addr = {nnn}");
+    _ = emu;
 }
 
+///Bnnn - JP V0, addr
+//Jump to location nnn + V0.
 pub fn op_b(emu: &mut Emu, opcode: u16){
-    println!("JP V0, addr");
+    let nnn = opcode & NNN_MASK;
+    println!("JP V0, addr | addr = {nnn}");
+    _ = emu;
 }
 
+///Cxkk - RND Vx, byte
+///Set Vx = random byte AND kk.
 pub fn op_c(emu: &mut Emu, opcode: u16){
-    println!("RND Vx, byte");
+    let x = opcode & X_MASK;
+    let kk = opcode & KK_MASK;
+    println!("RND Vx, byte | Vx = V{x}, byte = {kk}");
+    _ = emu;
 }
 
+///Dxyn - DRW Vx, Vy, nibble
+///Display n-byte sprite starting at memory location I at (Vx, Vy), set VF = collision.
 pub fn op_d(emu: &mut Emu, opcode: u16){
-    println!("DRW Vx, Vy, nibble");
+    let x = opcode & X_MASK;
+    let y = opcode & Y_MASK;
+    let n = opcode & LAST_MASK;
+    println!("DRW Vx, Vy, nibble | DRW V{x}, V{y}, {n}");
+    _ = emu;
 }
 
+///Ex9E - SKP Vx
+///Skip next instruction if key with the value of Vx is pressed.
 pub fn op_e(emu: &mut Emu, opcode: u16){
     let n = opcode & 0xFF;
-
+    let x = opcode & X_MASK;
+    _ = x;
     match n {
         0x9E => println!("SKP Vx"),
         0xA1 => println!("SKNP Vx"),
-        _ => println!("Error in op_E: Opcode: {n} unknown."),
+        _ => println!("Error in op_e: Opcode: {n} unknown."),
     }
+    _ = emu;
 }
 
 pub fn op_f(emu: &mut Emu, opcode: u16){
@@ -102,4 +181,5 @@ pub fn op_f(emu: &mut Emu, opcode: u16){
         0x65 => println!("LD Vx, [I]"),
         _ => println!("Error in op_F: Opcode: {n} unknown."),
     }
+    _ = emu;
 }
