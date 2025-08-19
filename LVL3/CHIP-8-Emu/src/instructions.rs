@@ -11,14 +11,18 @@ const X_MASK: u16 = 0x0F00;
 const Y_MASK: u16 = 0x00F0;
 const LAST_MASK: u16 = 0x000F;
 
+/*----------------------------------------------------------------------------*/
+/*                          INSTRUCTIONS REDIRECTIONS                         */
+/*----------------------------------------------------------------------------*/
+
 ///0x00E0 - CLS:
 ///Clear the display.
 ///00EE - RET:
 ///Return from a subroutine.
 pub fn op_0(emu: &mut Emu, opcode: u16){
     match opcode {
-        0x00E0 => println!("CLS"),
-        0x00EE => println!("RET"),
+        0x00E0 => clear(emu),
+        0x00EE => ret(emu),
         _ => println!("Error in op_0: Opcode: {opcode} unknown."),
     }
     _ = emu;
@@ -28,7 +32,7 @@ pub fn op_0(emu: &mut Emu, opcode: u16){
 ///Jump to location nnn.
 pub fn op_1(emu: &mut Emu, opcode: u16){
     let nnn = opcode & NNN_MASK;
-    println!("JP at {nnn}");
+    jump(emu, nnn);
     _ = emu;
 }
 
@@ -182,4 +186,27 @@ pub fn op_f(emu: &mut Emu, opcode: u16){
         _ => println!("Error in op_F: Opcode: {n} unknown."),
     }
     _ = emu;
+}
+
+/*----------------------------------------------------------------------------*/
+/*                            BASIC INSTRUCTIONS                              */
+/*----------------------------------------------------------------------------*/
+
+fn clear(emu: &mut Emu){
+    emu.display.fill(false);
+}
+
+fn ret(emu: &mut Emu){
+    emu.registers.pc = emu.stack[0x0];
+    emu.registers.sp -= 1;
+}
+
+fn jump(emu: &mut Emu, addr: u16){
+    emu.registers.pc = addr;
+}
+
+fn call(emu: &mut Emu, addr: u16){
+    emu.registers.sp += 1;
+    emu.stack[0x0] = emu.registers.pc;// Warning !!! Need to save the value before erasing her !
+    emu.registers.pc = addr;
 }

@@ -2,10 +2,8 @@ mod emu;
 mod rom;
 mod registers;
 mod instructions;
-mod memory;
 
 use crate::registers::Registers;
-use crate::memory::Memory;
 use crate::emu::Emu;
 use std::env;
 
