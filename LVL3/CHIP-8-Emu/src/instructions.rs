@@ -40,7 +40,7 @@ pub fn op_1(emu: &mut Emu, opcode: u16){
 ///Call subroutine at nnn.
 pub fn op_2(emu: &mut Emu,opcode: u16){
     let nnn = opcode & NNN_MASK;
-    println!("CALL: {nnn}");
+    call(emu, nnn);
     _ = emu;
 }
 

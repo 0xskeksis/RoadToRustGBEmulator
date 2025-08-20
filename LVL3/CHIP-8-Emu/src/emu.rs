@@ -9,7 +9,7 @@ const START_ADDR: u16 = 0x200;
 
 pub struct Emu {
     pub registers: Registers,
-    pub memory: [u8; 4096],
+    pub memory: [u8; RAM_SIZE],
     pub instructions: [fn(&mut Emu, u16); 16],
     pub display: [bool; SCREEN_HEIGHT * SCREEN_WIDTH],
     pub stack: [u16; STACK_SIZE],
@@ -48,7 +48,7 @@ impl Emu{
                 dt: 0,
                 st:0,
             },
-            memory: {[0; 4096]},
+            memory: {[0; RAM_SIZE]},
             instructions: [
                 instructions::op_0,
                 instructions::op_1,
