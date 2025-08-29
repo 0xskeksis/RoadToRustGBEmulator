@@ -47,59 +47,60 @@ pub fn op_2(emu: &mut Emu,opcode: u16){
 ///3xkk - SE Vx, byte
 ///Skip next instruction if Vx = kk.
 pub fn op_3(emu: &mut Emu, opcode: u16){
-    let x = opcode & X_MASK;
-    let kk = opcode & KK_MASK;
-    println!("SE Vx, byte: Vx = V{x} | kk = {kk}");
-    _ = emu;
+    let x = ((opcode & X_MASK) >> 8) as usize;
+    let kk = (opcode & KK_MASK) as u8;
+    if emu.registers.v[x] == kk {skip(emu);}
 }
 
 ///4xkk - SNE Vx, byte
 ///Skip next instruction if Vx != kk.
 pub fn op_4(emu: &mut Emu, opcode: u16){
-    let x = opcode & X_MASK;
-    let kk = opcode & KK_MASK;
-    println!("SNE Vx, byte: Vx = V{x} | kk = {kk}");
-    _ = emu;
+    let x = ((opcode & X_MASK) >> 8) as usize;
+    let kk = (opcode & KK_MASK) as u8;
+    if emu.registers.v[x] != kk {skip(emu);}
 }
 
 ///5xy0 - SE Vx, Vy
 ///Skip next instruction if Vx = Vy.
 pub fn op_5(emu: &mut Emu, opcode: u16){
+    let x = ((opcode & X_MASK) >> 8) as usize;
+    let y = ((opcode & Y_MASK) >> 4) as usize;
     let last = opcode & LAST_MASK;
+
     if last > 0x0 {
         println!("Error in op_5: opcode: {opcode} unknown.");
         return ;
     }
-    println!("SE Vx, Vy");
+    if emu.registers.v[x] != emu.registers.v[y] {skip(emu);}
     _ = emu;
 }
 
 ///6xkk - LD Vx, byte
 ///Set Vx = kk.
 pub fn op_6(emu: &mut Emu, opcode: u16){
-    let x = opcode & X_MASK;
-    let kk = opcode & KK_MASK;
-    println!("LD Vx, byte | Vx = V{x}, byte = {kk}");
-    _ = emu;
+    let x = ((opcode & X_MASK) >> 8) as usize;
+    let kk = (opcode & KK_MASK) as u8;
+    emu.registers.v[x] = kk;
 }
 
 ///7xkk - ADD Vx, byte
 ///Set Vx = Vx + kk.
 pub fn op_7(emu: &mut Emu, opcode: u16){
-    let x = opcode & X_MASK;
-    let kk = opcode & KK_MASK;
-    println!("ADD Vx, byte | Vx = V{x}, byte = {kk}");
-    _ = emu;
+    let x = ((opcode & X_MASK) >> 8) as usize;
+    let kk = (opcode & KK_MASK) as u8;
+    emu.registers.v[x] += kk as u8; //overflow
 }
 
 pub fn op_8(emu: &mut Emu, opcode: u16){
     let n = opcode & LAST_MASK;
+    let x = ((opcode & X_MASK) >> 8) as usize;
+    let y = ((opcode & Y_MASK) >> 4) as usize;
     match n {
-        0x0 => println!("LD Vx, Vy"),
-        0x1 => println!("OR Vx, Vy"),
-        0x2 => println!("AND Vx, Vy"),
-        0x3 => println!("XOR Vx, Vy"),
-        0x4 => println!("ADD Vx, Vy"),
+        0x0 => emu.registers.v[x] = emu.registers.v[y],     //LD Vx, Vy
+        0x1 => emu.registers.v[x] |= emu.registers.v[y],    //OR Vx, Vy 
+        0x2 => emu.registers.v[x] &= emu.registers.v[y],    //AND Vx, Vy 
+        0x3 => emu.registers.v[x] ^= emu.registers.v[y],    //XOR Vx, Vy 
+        0x4 => _ = emu, // flemme pour l'instant (ADD Vx, Vy but with carry)
         0x5 => println!("SUB Vx, Vy"),
         0x6 => println!("SHR Vx , Vy"),
         0x7 => println!("SUBN Vx, Vy"),
@@ -112,13 +113,15 @@ pub fn op_8(emu: &mut Emu, opcode: u16){
 ///9xy0 - SNE Vx, Vy
 ///Skip next instruction if Vx != Vy.
 pub fn op_9(emu: &mut Emu, opcode: u16){
+    let x = ((opcode & X_MASK) >> 8) as usize;
+    let y = ((opcode & Y_MASK) >> 4) as usize;
     let last = opcode & LAST_MASK;
+
     if last > 0x0 {
         println!("Error in op_9: opcode: {opcode} unknown.");
         return ;
     }
-    println!("SNE Vx, Vy");
-    _ = emu;
+    if emu.registers.v[x] != emu.registers.v[y] {skip(emu);}
 }
 
 ///Annn - LD I, addr
@@ -140,7 +143,7 @@ pub fn op_b(emu: &mut Emu, opcode: u16){
 ///Cxkk - RND Vx, byte
 ///Set Vx = random byte AND kk.
 pub fn op_c(emu: &mut Emu, opcode: u16){
-    let x = opcode & X_MASK;
+    let x = (opcode & X_MASK) >> 8;
     let kk = opcode & KK_MASK;
     println!("RND Vx, byte | Vx = V{x}, byte = {kk}");
     _ = emu;
@@ -149,8 +152,8 @@ pub fn op_c(emu: &mut Emu, opcode: u16){
 ///Dxyn - DRW Vx, Vy, nibble
 ///Display n-byte sprite starting at memory location I at (Vx, Vy), set VF = collision.
 pub fn op_d(emu: &mut Emu, opcode: u16){
-    let x = opcode & X_MASK;
-    let y = opcode & Y_MASK;
+    let x = ((opcode & X_MASK) >> 8) as usize;
+    let y = ((opcode & Y_MASK) >> 4) as usize;
     let n = opcode & LAST_MASK;
     println!("DRW Vx, Vy, nibble | DRW V{x}, V{y}, {n}");
     _ = emu;
@@ -159,8 +162,8 @@ pub fn op_d(emu: &mut Emu, opcode: u16){
 ///Ex9E - SKP Vx
 ///Skip next instruction if key with the value of Vx is pressed.
 pub fn op_e(emu: &mut Emu, opcode: u16){
-    let n = opcode & 0xFF;
-    let x = opcode & X_MASK;
+    let n = opcode & KK_MASK;
+    let x = (opcode & X_MASK) >> 8;
     _ = x;
     match n {
         0x9E => println!("SKP Vx"),
@@ -171,7 +174,8 @@ pub fn op_e(emu: &mut Emu, opcode: u16){
 }
 
 pub fn op_f(emu: &mut Emu, opcode: u16){
-    let n = opcode & 0xFF;
+    let n = opcode & KK_MASK;
+    let x = (opcode & X_MASK) >> 8;
 
     match n {
         0x7 => println!("LD Vx, DT"),
@@ -207,6 +211,10 @@ fn jump(emu: &mut Emu, addr: u16){
 
 fn call(emu: &mut Emu, addr: u16){
     emu.registers.sp += 1;
-    emu.stack[0x0] = emu.registers.pc;// Warning !!! Need to save the value before erasing her !
+    emu.stack[0x0] = emu.registers.pc; // Warning !!! Need to save the value before erasing her !
     emu.registers.pc = addr;
+}
+
+fn skip(emu: &mut Emu){
+    emu.registers.pc += 2;
 }
