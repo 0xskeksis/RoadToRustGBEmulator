@@ -13,6 +13,7 @@ pub struct Emu {
     pub instructions: [fn(&mut Emu, u16); 16],
     pub display: [bool; SCREEN_HEIGHT * SCREEN_WIDTH],
     pub stack: [u16; STACK_SIZE],
+    pub keys: [bool; 16],
 }
 
 const FONTSET: [u8; 80] = [
@@ -69,6 +70,7 @@ impl Emu{
             ],
             display: [false; SCREEN_HEIGHT * SCREEN_WIDTH],
             stack: [0x0; STACK_SIZE],
+            keys: [false; 16],
         };
         emu.load_fonts();
         emu

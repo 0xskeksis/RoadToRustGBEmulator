@@ -101,11 +101,31 @@ pub fn op_8(emu: &mut Emu, opcode: u16){
         0x1 => emu.registers.v[x] |= emu.registers.v[y],    //OR Vx, Vy 
         0x2 => emu.registers.v[x] &= emu.registers.v[y],    //AND Vx, Vy 
         0x3 => emu.registers.v[x] ^= emu.registers.v[y],    //XOR Vx, Vy 
-        0x4 => _ = emu, // flemme pour l'instant (ADD Vx, Vy but with carry)
-        0x5 => println!("SUB Vx, Vy"),
-        0x6 => println!("SHR Vx , Vy"),
-        0x7 => println!("SUBN Vx, Vy"),
-        0xE => println!("SHL Vx ,Vy"),
+        0x4 => {
+            let (sum, carry) = emu.registers.v[x].overflowing_add(emu.registers.v[y]);
+            emu.registers.v[x] = sum;
+            emu.registers.v[0xF] = if carry{1} else {0};
+        }
+        0x5 => {
+            let (sum, overflow) = emu.registers.v[x].overflowing_sub(emu.registers.v[y]);
+            emu.registers.v[x] = sum;
+            emu.registers.v[0xF] = if overflow{1} else {0};
+        }
+        0x6 => {
+           let lsb = emu.registers.v[x] & 0x1;
+           emu.registers.v[0xF] = lsb;
+           emu.registers.v[x] >>= 1;
+        },
+        0x7 => {
+            let (sum, carry) = emu.registers.v[y].overflowing_add(emu.registers.v[x]);
+            emu.registers.v[x] = sum;
+            emu.registers.v[0xF] = if carry{1} else {0};
+        },
+        0xE => {
+           let lsb = emu.registers.v[x] & 0x1;
+           emu.registers.v[0xF] = lsb;
+           emu.registers.v[x] <<= 1;
+        },
         _ => println!("Error in op_8: Opcode: {n} unknown."),
     }
     _ = emu;

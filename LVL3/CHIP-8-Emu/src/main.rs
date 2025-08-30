@@ -2,12 +2,14 @@ mod emu;
 mod rom;
 mod registers;
 mod instructions;
+mod sdl;
 
 use crate::registers::Registers;
 use crate::emu::Emu;
 use std::env;
 
 use crate::rom::load_rom;
+use crate::sdl::render_loop;
 
 
 
@@ -28,4 +30,5 @@ fn main() {
         println!("0x{:04X}: 0x{:04X}\t", 0x200 + i * 2, opcode);
         emu.instructions[((opcode & 0xF000) >> 12) as usize](&mut emu, opcode);
     }
+
 }
