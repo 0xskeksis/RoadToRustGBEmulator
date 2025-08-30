@@ -2,6 +2,7 @@
 ///
 /// Refs: http://devernay.free.fr/hacks/chip8/C8TECH10.HTM
 ///
+use rand::Rng;
 
 use crate::emu::Emu;
 
@@ -88,7 +89,7 @@ pub fn op_6(emu: &mut Emu, opcode: u16){
 pub fn op_7(emu: &mut Emu, opcode: u16){
     let x = ((opcode & X_MASK) >> 8) as usize;
     let kk = (opcode & KK_MASK) as u8;
-    emu.registers.v[x] += kk as u8; //overflow
+    emu.registers.v[x].wrapping_add(kk) as u8; //overflow
 }
 
 pub fn op_8(emu: &mut Emu, opcode: u16){
@@ -128,25 +129,25 @@ pub fn op_9(emu: &mut Emu, opcode: u16){
 ///Set I = nnn.
 pub fn op_a(emu: &mut Emu, opcode: u16){
     let nnn = opcode & NNN_MASK;
-    println!("LD I, addr | addr = {nnn}");
-    _ = emu;
+    emu.registers.i = nnn;
 }
 
 ///Bnnn - JP V0, addr
 //Jump to location nnn + V0.
 pub fn op_b(emu: &mut Emu, opcode: u16){
     let nnn = opcode & NNN_MASK;
-    println!("JP V0, addr | addr = {nnn}");
-    _ = emu;
+    jump(emu, nnn + emu.registers.v[0] as u16);
 }
 
 ///Cxkk - RND Vx, byte
 ///Set Vx = random byte AND kk.
 pub fn op_c(emu: &mut Emu, opcode: u16){
-    let x = (opcode & X_MASK) >> 8;
-    let kk = opcode & KK_MASK;
-    println!("RND Vx, byte | Vx = V{x}, byte = {kk}");
-    _ = emu;
+    let x = ((opcode & X_MASK) >> 8) as usize;
+    let kk = (opcode & KK_MASK) as u8;
+    let mut rng = rand::rng();
+    let random_nb = rng.random::<u8>();
+
+    emu.registers.v[x] = kk & random_nb;
 }
 
 ///Dxyn - DRW Vx, Vy, nibble
@@ -155,7 +156,8 @@ pub fn op_d(emu: &mut Emu, opcode: u16){
     let x = ((opcode & X_MASK) >> 8) as usize;
     let y = ((opcode & Y_MASK) >> 4) as usize;
     let n = opcode & LAST_MASK;
-    println!("DRW Vx, Vy, nibble | DRW V{x}, V{y}, {n}");
+
+    draw(emu, emu.registers.v[x], emu.registers.v[y]);
     _ = emu;
 }
 
@@ -217,4 +219,8 @@ fn call(emu: &mut Emu, addr: u16){
 
 fn skip(emu: &mut Emu){
     emu.registers.pc += 2;
+}
+
+fn draw(emu: &mut Emu, x: u8, y: u8){
+    
 }
