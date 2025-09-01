@@ -1,3 +1,6 @@
+use std::ops::Add;
+use sdl2::event::Event;
+
 /// Instructions lookup tables
 ///
 /// Refs: http://devernay.free.fr/hacks/chip8/C8TECH10.HTM
@@ -5,6 +8,7 @@
 use rand::Rng;
 
 use crate::emu::Emu;
+use crate::emu::FONTSET;
 
 const KK_MASK: u16 = 0x00FF;
 const NNN_MASK: u16 = 0x0FFF;
@@ -89,8 +93,7 @@ pub fn op_6(emu: &mut Emu, opcode: u16){
 pub fn op_7(emu: &mut Emu, opcode: u16){
     let x = ((opcode & X_MASK) >> 8) as usize;
     let kk = (opcode & KK_MASK) as u8;
-    emu.registers.v[x].wrapping_add(kk) as u8; //overflow
-}
+    emu.registers.v[x] = emu.registers.v[x].wrapping_add(kk);}
 
 pub fn op_8(emu: &mut Emu, opcode: u16){
     let n = opcode & LAST_MASK;
@@ -177,8 +180,28 @@ pub fn op_d(emu: &mut Emu, opcode: u16){
     let y = ((opcode & Y_MASK) >> 4) as usize;
     let n = opcode & LAST_MASK;
 
-    draw(emu, emu.registers.v[x], emu.registers.v[y]);
-    _ = emu;
+    let vx = emu.registers.v[x as usize];
+    let vy = emu.registers.v[y as usize];
+
+    emu.registers.v[0xF] = 0;
+
+    for row in 0..n {
+        let sprite_byte = emu.memory[(emu.registers.i as usize).wrapping_add(row.into())];
+        for bit in 0..8 {
+            // on lit de gauche à droite (MSB → LSB)
+            let pixel_on = (sprite_byte >> (7 - bit)) & 1;
+
+            if pixel_on == 1 {
+                let px = ((vx as usize + bit) % 64) as usize;
+                let py = ((vy as u16 + row) % 32) as usize;
+                let index = py * 64 + px;
+                if emu.display[index] {
+                    emu.registers.v[0xF] = 1;
+                }
+                emu.display[index] = !emu.display[index];
+            }
+        }
+    }
 }
 
 ///Ex9E - SKP Vx
@@ -188,8 +211,16 @@ pub fn op_e(emu: &mut Emu, opcode: u16){
     let x = (opcode & X_MASK) >> 8;
     _ = x;
     match n {
-        0x9E => println!("SKP Vx"),
-        0xA1 => println!("SKNP Vx"),
+        0x9E => {
+            if emu.keys[emu.registers.v[x as usize] as usize] == true {
+                skip(emu);
+            }
+        }
+        0xA1 => {
+            if emu.keys[emu.registers.v[x as usize] as usize] != true {
+                skip(emu);
+            }
+        }
         _ => println!("Error in op_e: Opcode: {n} unknown."),
     }
     _ = emu;
@@ -197,18 +228,31 @@ pub fn op_e(emu: &mut Emu, opcode: u16){
 
 pub fn op_f(emu: &mut Emu, opcode: u16){
     let n = opcode & KK_MASK;
-    let x = (opcode & X_MASK) >> 8;
+    let x = ((opcode & X_MASK) >> 8) as usize;
 
     match n {
-        0x7 => println!("LD Vx, DT"),
-        0x0A => println!("LD Vx, K"),
-        0x15 => println!("LD DT, Vx"),
-        0x18 => println!("LD ST, Vx"),
-        0x1E => println!("ADD I, Vx"),
-        0x29 => println!("LD F, Vx"),
-        0x33 => println!("LD B, Vx"),
-        0x55 => println!("LD [I], Vx"),
-        0x65 => println!("LD Vx, [I]"),
+        0x7 => emu.registers.v[x as usize] = emu.registers.dt,
+        0x0A => {
+            emu.waiting_for_key = Some(x);
+        },
+        0x15 => emu.registers.dt = emu.registers.v[x],
+        0x18 => emu.registers.st = emu.registers.v[x],
+        0x1E => emu.registers.i += (emu.registers.v[x]) as u16,
+        0x29 => emu.registers.i = emu.registers.v[x] as u16,
+        0x33 => {
+            emu.memory[emu.registers.i as usize] = emu.registers.v[x] / 100;
+            emu.memory[emu.registers.i as usize + 1] = (emu.registers.v[x] / 10) % 10;
+            emu.memory[emu.registers.i as usize + 2] = emu.registers.v[x] % 10;}
+        0x55 => {
+            for i in 0..=x {
+                emu.memory[emu.registers.i as usize + i] = emu.registers.v[i];
+            }
+        }
+        0x65 => {
+               for i in 0..=x {
+                emu.registers.v[i] = emu.memory[emu.registers.i as usize + i];
+            }
+        }
         _ => println!("Error in op_F: Opcode: {n} unknown."),
     }
     _ = emu;
@@ -223,7 +267,11 @@ fn clear(emu: &mut Emu){
 }
 
 fn ret(emu: &mut Emu){
-    emu.registers.pc = emu.stack[0x0];
+    if emu.registers.sp == 0 {
+        println!("Error: stack underflow on RET");
+        return;
+    }
+    emu.registers.pc = emu.stack[emu.registers.sp as usize];
     emu.registers.sp -= 1;
 }
 
@@ -232,8 +280,12 @@ fn jump(emu: &mut Emu, addr: u16){
 }
 
 fn call(emu: &mut Emu, addr: u16){
+   if emu.registers.sp as usize >= emu.stack.len() - 1 { 
+        println!("Error: stack overflow on CALL");
+        return;
+    }
     emu.registers.sp += 1;
-    emu.stack[0x0] = emu.registers.pc; // Warning !!! Need to save the value before erasing her !
+    emu.stack[emu.registers.sp as usize] = emu.registers.pc;
     emu.registers.pc = addr;
 }
 
@@ -241,6 +293,10 @@ fn skip(emu: &mut Emu){
     emu.registers.pc += 2;
 }
 
-fn draw(emu: &mut Emu, x: u8, y: u8){
-    
+pub fn fetch_opcode(emu: &mut Emu) -> u16 {
+    let pc = emu.registers.pc as usize;
+    let high = emu.memory[pc] as u16;
+    let low  = emu.memory[pc + 1] as u16;
+    emu.registers.pc += 2;
+    (high << 8) | low
 }

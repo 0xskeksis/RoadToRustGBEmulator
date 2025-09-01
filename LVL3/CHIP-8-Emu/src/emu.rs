@@ -14,9 +14,10 @@ pub struct Emu {
     pub display: [bool; SCREEN_HEIGHT * SCREEN_WIDTH],
     pub stack: [u16; STACK_SIZE],
     pub keys: [bool; 16],
+    pub waiting_for_key: Option<usize>,
 }
 
-const FONTSET: [u8; 80] = [
+pub const FONTSET: [u8; 80] = [
     0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
     0x20, 0x60, 0x20, 0x20, 0x70, // 1
     0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
@@ -71,6 +72,7 @@ impl Emu{
             display: [false; SCREEN_HEIGHT * SCREEN_WIDTH],
             stack: [0x0; STACK_SIZE],
             keys: [false; 16],
+            waiting_for_key: None,
         };
         emu.load_fonts();
         emu

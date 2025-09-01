@@ -4,7 +4,6 @@ use sdl2::pixels::Color;
 use std::time::Duration;
 
 use crate::emu::Emu;
-use crate::instructions::fetch_opcode;
 
 fn map_to_chip8(key: Keycode) -> Option<usize> {
     match key {
@@ -47,46 +46,24 @@ pub fn render_loop(emu: &mut Emu) -> Result<(), String>{
 
      let mut event_pump = sdl_context.event_pump()?;
 
-'running: loop {
-    for event in event_pump.poll_iter() {
-        match event {
-            Event::Quit {..} => break 'running,
-
-            Event::KeyDown { keycode: Some(key), .. } => {
-                if let Some(chip8_key) = map_to_chip8(key) {
-                    emu.keys[chip8_key] = true;
-
-                    if let Some(vx_index) = emu.waiting_for_key {
-                        emu.registers.v[vx_index] = chip8_key as u8;
-                        emu.waiting_for_key = None;
-                        emu.registers.pc += 2;
+     'running: loop {
+        for event in event_pump.poll_iter() {
+            match event {
+                Event::Quit {..} => break 'running,
+                Event::KeyDown { keycode: Some(key), .. } => {
+                    if let Some(chip8_key) = map_to_chip8(key) {
+                        emu.keys[chip8_key] = true;
                     }
                 }
-            }
-
-            Event::KeyUp { keycode: Some(key), .. } => {
-                if let Some(chip8_key) = map_to_chip8(key) {
-                    emu.keys[chip8_key] = false;
+                Event::KeyUp { keycode: Some(key), .. } => {
+                    if let Some(chip8_key) = map_to_chip8(key) {
+                        emu.keys[chip8_key] = false;
+                    }
                 }
+
+                _ => {}
             }
-
-            _ => {}
         }
-    }
-
-    if emu.waiting_for_key.is_some() {
-        canvas.present();
-        std::thread::sleep(Duration::from_millis(16));
-        continue;
-    }
-
-    // Exécution normale
-    for _ in 0..10 {
-        let opcode = fetch_opcode(emu);
-        let index = ((opcode & 0xF000) >> 12) as usize;
-        emu.instructions[index](emu, opcode);
-    }
-
 
         canvas.set_draw_color(Color::BLACK);
         canvas.clear();
@@ -95,16 +72,11 @@ pub fn render_loop(emu: &mut Emu) -> Result<(), String>{
         canvas.set_draw_color(Color::WHITE);
         for y in 0..32 {
             for x in 0..64 {
-                if emu.display[y * 64 + x] == true {
-                    let rect = sdl2::rect::Rect::new(
-                        (x as i32) * 10,
-                        (y as i32) * 10,
-                        10,
-                        10);
-                    canvas.fill_rect(rect)?;
-                }
+
+                let rect = sdl2::rect::Rect::new(x * 10, y * 10, 10, 10)?;
             }
         }
+        canvas.fill_rect(sdl2::rect::Rect::new(10 * 10, 5 * 10, 10, 10))?;
 
         canvas.present();
 
