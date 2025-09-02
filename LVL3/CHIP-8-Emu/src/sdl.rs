@@ -1,7 +1,7 @@
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use crate::emu::Emu;
 use crate::instructions::fetch_opcode;
@@ -46,6 +46,7 @@ pub fn render_loop(emu: &mut Emu) -> Result<(), String>{
     canvas.present();
 
      let mut event_pump = sdl_context.event_pump()?;
+     let mut last_timer_update = Instant::now();
 
 'running: loop {
     for event in event_pump.poll_iter() {
@@ -80,12 +81,21 @@ pub fn render_loop(emu: &mut Emu) -> Result<(), String>{
         continue;
     }
 
-    // Exécution normale
-    for _ in 0..10 {
+    for _ in 0..50 {
         let opcode = fetch_opcode(emu);
         let index = ((opcode & 0xF000) >> 12) as usize;
         emu.instructions[index](emu, opcode);
     }
+
+    if last_timer_update.elapsed() >= Duration::from_millis(16) {
+            if emu.registers.dt > 0 {
+                emu.registers.dt -= 1;
+            }
+            if emu.registers.st > 0 {
+                emu.registers.st -= 1;
+            }
+            last_timer_update = Instant::now();
+        }
 
 
         canvas.set_draw_color(Color::BLACK);

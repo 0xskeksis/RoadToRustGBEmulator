@@ -210,20 +210,22 @@ pub fn op_e(emu: &mut Emu, opcode: u16){
     let n = opcode & KK_MASK;
     let x = (opcode & X_MASK) >> 8;
     _ = x;
-    match n {
-        0x9E => {
-            if emu.keys[emu.registers.v[x as usize] as usize] == true {
-                skip(emu);
+    if x <= 0xF {
+        match n {
+            0x9E => {
+                if emu.keys[emu.registers.v[x as usize] as usize] == true {
+                    skip(emu);
+                }
             }
-        }
-        0xA1 => {
-            if emu.keys[emu.registers.v[x as usize] as usize] != true {
-                skip(emu);
+            0xA1 => {
+                if emu.keys[emu.registers.v[x as usize] as usize] != true {
+                    skip(emu);
+                }
             }
+            _ => println!("Error in op_e: Opcode: {n} unknown."),
         }
-        _ => println!("Error in op_e: Opcode: {n} unknown."),
+
     }
-    _ = emu;
 }
 
 pub fn op_f(emu: &mut Emu, opcode: u16){
@@ -238,7 +240,7 @@ pub fn op_f(emu: &mut Emu, opcode: u16){
         0x15 => emu.registers.dt = emu.registers.v[x],
         0x18 => emu.registers.st = emu.registers.v[x],
         0x1E => emu.registers.i += (emu.registers.v[x]) as u16,
-        0x29 => emu.registers.i = emu.registers.v[x] as u16,
+        0x29 => emu.registers.i = (emu.registers.v[x] as u16) * 5,
         0x33 => {
             emu.memory[emu.registers.i as usize] = emu.registers.v[x] / 100;
             emu.memory[emu.registers.i as usize + 1] = (emu.registers.v[x] / 10) % 10;
